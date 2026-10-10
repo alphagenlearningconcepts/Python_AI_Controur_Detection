@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Python AI: Contour Detection - Alphagen Learning</title>
+
+  <!-- Google Fonts: Poppins & Fira Code -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600;700&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FontAwesome & Canvas Confetti CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Poppins', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            alphagen: {
+              purple: '#5E48C4',
+              purpleDark: '#4A3AAD',
+              purpleMid: '#7B6ED4',
+              purplePale: '#EAE7FE',
+              purpleGhost: '#F5F4FF',
+              yellow: '#FFD071',
+              yellowDark: '#E6B84A',
+              yellowPale: '#FFF3CC',
+              nearBlack: '#1A1A1A',
+              darkGrey: '#404048',
+              midGrey: '#888896',
+              lightGrey: '#F2F2F4',
+              cyan: '#59E4FB',
+              cyanDark: '#055F6E',
+              cyanPale: '#E0FAFE',
+              coral: '#ED5661',
+              coralDark: '#993040',
+              coralPale: '#FFF0F1'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      margin: 0;
+      padding: 12px;
+      background-color: #0f081d;
+      font-family: 'Poppins', sans-serif;
+      color: #1A1A1A;
+      overflow-x: hidden;
+      user-select: none;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .stage-wrapper {
+      width: 100%;
+      max-width: 1280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .slide-stage {
+      width: 1280px;
+      height: 720px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      background-color: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+      border: 1px solid #EAE7FE;
+      transform-origin: top center;
+    }
+
+    .slide-panel {
+      width: 1280px;
+      height: 720px;
+      padding: 68px 46px 20px 46px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      box-sizing: border-box;
+      background: #ffffff;
+    }
+
+    .slide-panel.active {
+      display: flex;
+      animation: slideInSmooth 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInSmooth {
+      from { opacity: 0; transform: scale(0.985) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .btn-interactive {
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-interactive:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 10px 20px -5px rgba(94, 72, 196, 0.3);
+    }
+    .btn-interactive:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .nav-bar {
+      width: 1280px;
+      margin: 12px auto 6px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      transform-origin: top center;
+    }
+
+    .nav-btn {
+      background: #2A1C68;
+      color: #FFD071;
+      border: 2px solid #5E48C4;
+      padding: 10px 24px;
+      border-radius: 14px;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: #5E48C4;
+      color: #ffffff;
+      transform: scale(1.04);
+    }
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .nav-btn.finish-btn {
+      background: #FFD071;
+      color: #1A1A1A;
+      border-color: #FFD071;
+      animation: pulseFinish 1.6s infinite alternate;
+    }
+
+    @keyframes pulseFinish {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 208, 113, 0.6); }
+      100% { transform: scale(1.05); box-shadow: 0 0 16px 4px rgba(255, 208, 113, 0.4); }
+    }
+
+    .dot-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2A1C68;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .dot-indicator.active {
+      background: #FFD071;
+      width: 24px;
+      border-radius: 10px;
+    }
+
+    .spark-wavy-underline {
+      position: relative;
+      display: inline-block;
+      color: #5E48C4;
+    }
+    .spark-wavy-underline::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -6px;
+      width: 100%;
+      height: 12px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 4' preserveAspectRatio='none'%3E%3Cpath d='M0 2 Q 5 0, 10 2 T 20 2' fill='none' stroke='%23FFD071' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: repeat-x;
+      background-size: 20px 12px;
+    }
+
+    .quiz-option {
+      background: #ffffff;
+      border: 2px solid #EAE7FE;
+      border-radius: 18px;
+      padding: 13px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1A1A1A;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+    }
+    .quiz-option:hover {
+      border-color: #5E48C4;
+      background: #F5F4FF;
+      transform: translateX(4px);
+    }
+    .quiz-option.selected-correct {
+      background: #f0fdf4 !important;
+      border-color: #22c55e !important;
+      color: #14532d !important;
+    }
+    .quiz-option.selected-wrong {
+      background: #FFF0F1 !important;
+      border-color: #ED5661 !important;
+      color: #993040 !important;
+    }
+
+    .param-chip {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 208, 113, 0.4);
+      color: #FFD071;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-block;
+    }
+    .param-chip:hover, .param-chip.active {
+      background: #FFD071;
+      color: #1A1A1A;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+
+<body>
+<div class="stage-wrapper">
+
+  <header class="w-full bg-alphagen-purpleDark px-4 py-3.5 flex flex-wrap items-center justify-between gap-3 text-white shadow-md rounded-2xl mb-3 border border-alphagen-purpleMid">
+    <div class="flex items-center gap-3">
+      <a href="#" class="bg-alphagen-yellow hover:bg-alphagen-yellowDark text-alphagen-nearBlack px-4 py-2 rounded-xl font-extrabold text-xs md:text-sm shadow-sm transition-all flex items-center gap-2">
+        <span class="tracking-wide">ALPHAGEN LEARNING</span>
+      </a>
+      <span class="font-extrabold text-base md:text-xl tracking-tight text-white">
+        Python AI: Contour Detection &amp; Boundary Analysis
+      </span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="toggleAudio()" id="top-audio-btn" class="bg-alphagen-purple hover:bg-alphagen-purpleMid text-white p-2 rounded-lg transition-all" title="Toggle Sound">
+        <i class="fa-solid fa-volume-high text-base" id="sound-icon"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="slide-stage">
+
+    <header class="w-full bg-white border-b border-alphagen-purplePale px-6 py-2.5 flex items-center justify-between relative z-50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-alphagen-purple flex items-center justify-center text-white text-xl shadow-md shadow-alphagen-purple/20">
+          <i class="fa-solid fa-draw-polygon"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-base text-alphagen-purple tracking-tight">Computer Vision — Contour Detection</h1>
+          <p class="text-xs font-semibold text-alphagen-yellowDark">Shape Boundaries &amp; Object Outlines</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2" id="header-dots-container"></div>
+
+      <div class="flex items-center gap-3">
+        <span id="slide-counter-pill" class="text-xs font-bold text-alphagen-purple bg-alphagen-purpleGhost px-3.5 py-1.5 rounded-full border border-alphagen-purplePale">
+          Slide 1 / 7
+        </span>
+
+        <select id="slide-dropdown" onchange="goToSlide(parseInt(this.value))" class="text-xs font-bold text-alphagen-nearBlack bg-alphagen-lightGrey hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-xl cursor-pointer focus:outline-none focus:border-alphagen-purple transition">
+          <option value="1">1. Welcome Screen</option>
+          <option value="2">2. Warm Up: Object Detection Review</option>
+          <option value="3">3. What is a Contour? (Visual Output)</option>
+          <option value="4">4. Pipeline &amp; Thresholding Simulator</option>
+          <option value="5">5. Finding &amp; Drawing Contours</option>
+          <option value="6">6. Coding Checklist &amp; Live Video Challenge</option>
+          <option value="7">7. Knowledge Check &amp; Celebration</option>
+        </select>
+
+        <button onclick="toggleAudio()" id="audio-btn" class="w-9 h-9 rounded-xl bg-alphagen-purpleGhost hover:bg-alphagen-purplePale text-alphagen-purple border border-alphagen-purplePale flex items-center justify-center text-sm transition btn-interactive" title="Toggle Sound">
+          <i class="fa-solid fa-volume-high"></i>
+        </button>
+      </div>
+    </header>
+
+    <div id="slide-1" class="slide-panel active justify-center items-center text-center">
+      <div class="inline-flex items-center gap-2 bg-alphagen-purpleGhost border-2 border-alphagen-purplePale text-alphagen-purple text-sm font-extrabold px-6 py-2 rounded-full mb-8 tracking-wider uppercase">
+        <i class="fa-solid fa-shapes text-alphagen-yellowDark"></i> PYTHON AI MODULE
+      </div>
+
+      <h1 class="text-6xl md:text-7xl font-extrabold text-alphagen-nearBlack mb-12 tracking-tight leading-tight">
+        Python AI: <span class="spark-wavy-underline">Contour Detection</span>
+      </h1>
+
+      <button onclick="nextSlide(); playSound('pop')" class="bg-alphagen-yellow hover:bg-alphagen-yellowDark text-alphagen-nearBlack font-extrabold text-xl px-12 py-5 rounded-2xl shadow-xl btn-interactive flex items-center gap-3">
+        <span>Start Exploring</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+
+    <div id="slide-2" class="slide-panel bg-white justify-between">
+      <div>
+        <span class="text-xs uppercase font-extrabold tracking-wider text-alphagen-purple bg-alphagen-purpleGhost px-4 py-1.5 rounded-md border border-alphagen-purplePale">Concepts Review</span>
+        <h2 class="text-3xl font-extrabold text-alphagen-purple mt-2">Warm-Up </h2>
+        <p class="text-sm text-alphagen-darkGrey font-medium mt-1">Refresh the core detection functions before we explore shape boundaries:</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-8 my-auto items-stretch">
+        <!-- Question 1: Detection Function Name -->
+        <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-6 rounded-3xl flex flex-col justify-between shadow-xs">
+          <div>
+            <span class="bg-alphagen-purple text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase mb-3 inline-block">QUESTION 1</span>
+            <h3 class="font-extrabold text-base text-alphagen-nearBlack mb-3">
+              What is the name of the OpenCV function used for detecting objects like faces and smiles?
+            </h3>
+            <div class="space-y-3">
+              <button onclick="checkWarmupQ(this, false, 'w1')" class="quiz-option w-full">
+                <span class="font-mono font-medium">cv2.findObjects()</span>
+              </button>
+              <button onclick="checkWarmupQ(this, true, 'w1')" class="quiz-option w-full">
+                <span class="font-mono font-medium">cv2.detectMultiScale()</span>
+              </button>
+              <button onclick="checkWarmupQ(this, false, 'w1')" class="quiz-option w-full">
+                <span class="font-mono font-medium">cv2.scanPixels()</span>
+              </button>
+            </div>
+          </div>
+          <div id="w1-feedback" class="hidden p-3 rounded-xl text-xs font-bold text-center mt-3"></div>
+        </div>
+
+        <!-- Question 2: Parameters of detectMultiScale -->
+        <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-6 rounded-3xl flex flex-col justify-between shadow-xs">
+          <div>
+            <span class="bg-alphagen-yellowDark text-alphagen-nearBlack text-[11px] font-extrabold px-3 py-1 rounded-full uppercase mb-3 inline-block">QUESTION 2</span>
+            <h3 class="font-extrabold text-base text-alphagen-nearBlack mb-3">
+              What are the two key parameters passed inside the <code>detectMultiScale()</code> function?
+            </h3>
+            <div class="space-y-3">
+              <button onclick="checkWarmupQ(this, false, 'w2')" class="quiz-option w-full">
+                <span class="font-mono font-medium">thresholdValue and maxPixelIntensity</span>
+              </button>
+              <button onclick="checkWarmupQ(this, true, 'w2')" class="quiz-option w-full">
+                <span class="font-mono font-medium">scaleFactor and minNeighbors</span>
+              </button>
+              <button onclick="checkWarmupQ(this, false, 'w2')" class="quiz-option w-full">
+                <span class="font-mono font-medium">colorSpace and cameraChannel</span>
+              </button>
+            </div>
+          </div>
+          <div id="w2-feedback" class="hidden p-3 rounded-xl text-xs font-bold text-center mt-3"></div>
+        </div>
+      </div>
+
+     
+    </div>
+
+    <div id="slide-3" class="slide-panel bg-white justify-between">
+      <div>
+        <span class="text-xs uppercase font-extrabold tracking-wider text-alphagen-purple bg-alphagen-purpleGhost px-4 py-1.5 rounded-md border border-alphagen-purplePale">Core Foundation</span>
+        <h2 class="text-3xl font-extrabold text-alphagen-purple mt-2">What is a Contour?</h2>
+        <p class="text-sm text-alphagen-darkGrey font-medium mt-1">A curve joining all the continuous points along a boundary with the same color or intensity.</p>
+      </div>
+
+      <div class="grid grid-cols-12 gap-8 my-auto items-stretch">
+        <!-- Explanation on Left (5 cols) -->
+        <div class="col-span-5 bg-alphagen-purpleGhost border-2 border-alphagen-purplePale rounded-3xl p-6 flex flex-col justify-between">
+          <div class="space-y-3">
+            <span class="bg-alphagen-purple text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase inline-block">KEY CONCEPT</span>
+            <h3 class="font-extrabold text-lg text-alphagen-nearBlack">The Outline of Shapes</h3>
+            <ul class="text-xs text-alphagen-darkGrey font-medium leading-relaxed space-y-2">
+              <li class="flex items-start gap-2">
+                <span class="text-purple-600 font-bold">•</span>
+                <span>Contour detection connects all border pixels having identical brightness.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-purple-600 font-bold">•</span>
+                <span>It is primarily used for <strong>shape analysis</strong>, object detection, and size measurement.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-purple-600 font-bold">•</span>
+                <span>For high accuracy, we always apply contours on <strong>binary images</strong> (black and white)!</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="bg-white p-3.5 rounded-2xl border border-alphagen-purplePale text-xs font-bold text-alphagen-purple text-center">
+            Analogy: Think of tracing a marker pen along the outer boundary of a cutout!
+          </div>
+        </div>
+
+        <!-- Input vs Output Image Display (7 cols) -->
+        <div class="col-span-7 bg-slate-900 border-2 border-slate-800 rounded-3xl p-6 text-white flex flex-col justify-between shadow-xl">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3 text-xs font-mono">
+            <span class="text-alphagen-yellow font-bold uppercase">VISUAL BOUNDARY TRACING</span>
+            <span class="text-emerald-400 font-bold">BEFORE &amp; AFTER CONTOURS</span>
+          </div>
+
+          <!-- Comparison Viewport -->
+          <div class="grid grid-cols-2 gap-4 my-auto">
+            <!-- Input Image Card -->
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-between text-center">
+              <span class="text-xs font-mono font-bold text-slate-400 uppercase mb-2">1. Input Image</span>
+              
+              <!-- SVG Visual Representation of Shapes -->
+              <div class="w-full h-36 bg-[#1a2238] rounded-xl flex items-center justify-center p-3 relative overflow-hidden border border-slate-800">
+                <svg viewBox="0 0 160 110" class="w-full h-full">
+                  <!-- Red Circle -->
+                  <circle cx="45" cy="55" r="28" fill="#ED5661" />
+                  <!-- Yellow Star/Diamond -->
+                  <polygon points="115,25 138,55 115,85 92,55" fill="#FFD071" />
+                </svg>
+              </div>
+              <p class="text-[11px] text-slate-400 font-sans mt-2">Solid colored geometric shapes on canvas</p>
+            </div>
+
+            <!-- Output Image Card with Traced Contours -->
+            <div class="bg-slate-950 border-2 border-emerald-500/60 rounded-2xl p-4 flex flex-col items-center justify-between text-center">
+              <span class="text-xs font-mono font-bold text-emerald-400 uppercase mb-2">2. Output (With Contours)</span>
+
+              <div class="w-full h-36 bg-[#1a2238] rounded-xl flex items-center justify-center p-3 relative overflow-hidden border border-slate-800">
+                <svg viewBox="0 0 160 110" class="w-full h-full">
+                  <!-- Shaded Circle with bright green contour stroke -->
+                  <circle cx="45" cy="55" r="28" fill="#ED5661" fill-opacity="0.3" stroke="#10B981" stroke-width="4" stroke-dasharray="2 1" />
+                  <!-- Shaded Star with bright green contour stroke -->
+                  <polygon points="115,25 138,55 115,85 92,55" fill="#FFD071" fill-opacity="0.3" stroke="#10B981" stroke-width="4" stroke-dasharray="2 1" />
+                  <!-- Key point indicator dots -->
+                  <circle cx="45" cy="27" r="3" fill="#FFD071" />
+                  <circle cx="45" cy="83" r="3" fill="#FFD071" />
+                  <circle cx="115" cy="25" r="3" fill="#FFD071" />
+                  <circle cx="138" cy="55" r="3" fill="#FFD071" />
+                  <circle cx="115" cy="85" r="3" fill="#FFD071" />
+                  <circle cx="92" cy="55" r="3" fill="#FFD071" />
+                </svg>
+              </div>
+              <p class="text-[11px] text-emerald-400 font-sans mt-2 font-bold">Green continuous boundary contours drawn</p>
+            </div>
+          </div>
+
+          <div class="p-2.5 bg-black rounded-xl border border-slate-800 text-center text-xs font-mono text-alphagen-yellow">
+            cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
+          </div>
+        </div>
+      </div>
+
+     
+    </div>
+
+    <div id="slide-4" class="slide-panel bg-white justify-between">
+      <div>
+        <span class="text-xs uppercase font-extrabold tracking-wider text-alphagen-purple bg-alphagen-purpleGhost px-4 py-1.5 rounded-md border border-alphagen-purplePale">Pipeline Step-by-Step</span>
+        <h2 class="text-3xl font-extrabold text-alphagen-purple mt-2">Steps to Detect Contours &amp; Apply Thresholding</h2>
+      </div>
+
+      <div class="grid grid-cols-12 gap-6 my-auto items-stretch">
+        <!-- Interactive Steps Check Inputs (5 cols) -->
+        <div class="col-span-5 bg-alphagen-purpleGhost border-2 border-alphagen-purplePale rounded-3xl p-5 flex flex-col justify-between">
+          <div class="space-y-3">
+            <span class="text-xs font-extrabold text-alphagen-purple uppercase tracking-wider block">PRE-PROCESSING PIPELINE STEPS:</span>
+
+            <!-- Step 1: Import -->
+            <div class="bg-white p-3 rounded-2xl border border-alphagen-purplePale">
+              <label class="text-xs font-bold text-alphagen-nearBlack block mb-1">Step 1: Which library do we need to import for computer vision?</label>
+              <div class="flex gap-2">
+                <input type="text" id="pipe-import-input" placeholder="Type your answer..." class="w-full text-xs font-mono p-2 border rounded-xl outline-none focus:border-alphagen-purple">
+                <button onclick="checkPipeStep('import')" class="bg-alphagen-purple text-white px-3 py-1 text-xs font-bold rounded-xl btn-interactive">Check</button>
+              </div>
+              <span id="pipe-import-fb" class="text-[11px] font-bold block mt-1 hidden"></span>
+            </div>
+
+            <!-- Step 2: Read -->
+            <div class="bg-white p-3 rounded-2xl border border-alphagen-purplePale">
+              <label class="text-xs font-bold text-alphagen-nearBlack block mb-1">Step 2: How do we read an image in Python?</label>
+              <div class="flex gap-2">
+                <input type="text" id="pipe-read-input" placeholder="Type function name or statement..." class="w-full text-xs font-mono p-2 border rounded-xl outline-none focus:border-alphagen-purple">
+                <button onclick="checkPipeStep('read')" class="bg-alphagen-purple text-white px-3 py-1 text-xs font-bold rounded-xl btn-interactive">Check</button>
+              </div>
+              <span id="pipe-read-fb" class="text-[11px] font-bold block mt-1 hidden"></span>
+            </div>
+
+            <!-- Step 3: Grayscale -->
+            <div class="bg-white p-3 rounded-2xl border border-alphagen-purplePale">
+              <label class="text-xs font-bold text-alphagen-nearBlack block mb-1">Step 3: How do we grayscale the image?</label>
+              <div class="flex gap-2">
+                <input type="text" id="pipe-gray-input" placeholder="Type conversion function..." class="w-full text-xs font-mono p-2 border rounded-xl outline-none focus:border-alphagen-purple">
+                <button onclick="checkPipeStep('gray')" class="bg-alphagen-purple text-white px-3 py-1 text-xs font-bold rounded-xl btn-interactive">Check</button>
+              </div>
+              <span id="pipe-gray-fb" class="text-[11px] font-bold block mt-1 hidden"></span>
+            </div>
+          </div>
+
+          <div class="bg-white p-2.5 rounded-xl border border-alphagen-purplePale text-xs font-bold text-alphagen-purple text-center mt-2">
+            After grayscaling, we move to <strong>Step 4: Thresholding</strong> to separate foreground shapes from background!
+          </div>
+        </div>
+
+        <!-- Interactive Threshold Simulator (7 cols) -->
+        <div class="col-span-7 bg-slate-900 border-2 border-slate-800 rounded-3xl p-5 text-white flex flex-col justify-between font-mono shadow-xl">
+          <div>
+            <div class="border-b border-slate-800 pb-2 mb-2 text-xs text-alphagen-yellow font-bold flex justify-between">
+              <span>STEP 4: THRESHOLDING EXPLAINED &amp; SIMULATOR</span>
+              <span class="text-alphagen-cyan">BINARY CONVERSION</span>
+            </div>
+
+            <!-- Why do we need thresholding explanation -->
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 font-sans text-xs text-slate-300 leading-relaxed mb-2.5">
+              <strong class="text-amber-300 block mb-0.5">What is Thresholding and why do we need it?</strong>
+              Thresholding converts a grayscale image into pure <strong>Black and White (Binary)</strong>. Contours require high contrast between the object and the background to trace boundary points without noise.
+            </div>
+
+            <!-- Threshold Syntax Code Box -->
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs leading-relaxed mb-2.5">
+              <span class="text-slate-400"># Syntax: ret, thresh = cv2.threshold(src, thresh_val, maxval, type)</span><br>
+              ret, thresh = cv2.threshold(<span class="text-yellow-300">gray</span>, <span id="thresh-val-code" class="text-emerald-400 font-bold">127</span>, <span class="text-cyan-300">255</span>, <span class="text-purple-400">cv2.THRESH_BINARY</span>)
+            </div>
+
+            <!-- Interactive Slider Controls & Rule Explanation -->
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5 mb-2.5">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-300 font-bold font-sans">Adjust Cutoff Threshold Value:</span>
+                <span id="thresh-val-display" class="bg-alphagen-purple text-white font-bold px-3 py-0.5 rounded-lg text-xs font-mono">127</span>
+              </div>
+              <input type="range" id="thresh-slider" min="50" max="200" value="127" oninput="updateThreshSimulation(this.value)" class="w-full accent-alphagen-yellow cursor-pointer">
+              
+              <div class="text-[11px] font-sans text-slate-300 bg-slate-900 p-2 rounded-lg border border-slate-800 leading-tight">
+                ⚖️ <strong>How pixels are decided:</strong><br>
+                • Pixel intensity <span class="text-emerald-400 font-bold">&gt; <span id="thresh-rule-val">127</span></span> $\rightarrow$ becomes <strong>255 (White)</strong><br>
+                • Pixel intensity <span class="text-rose-400 font-bold">&le; <span id="thresh-rule-val-2">127</span></span> $\rightarrow$ becomes <strong>0 (Black)</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Visual comparison: Original shape color vs Threshold Output -->
+          <div class="bg-black p-3 rounded-2xl border border-slate-800 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="text-center font-sans">
+                <div class="w-14 h-14 rounded-xl bg-red-600 border-2 border-slate-700 flex items-center justify-center text-[10px] text-white font-bold shadow-inner">
+                  RGB Red
+                </div>
+                <span class="text-[10px] text-slate-400 font-mono mt-1 block">Input Shape</span>
+              </div>
+
+              <div class="text-slate-500 font-bold text-lg">➔</div>
+
+              <div class="text-center font-sans">
+                <div id="sim-shape" class="w-14 h-14 rounded-xl border-2 border-white transition-all duration-200 flex items-center justify-center font-bold text-xs" style="background-color: #ffffff; color: #000000;">
+                  255
+                </div>
+                <span id="sim-pixel-lbl" class="text-[10px] text-emerald-400 font-mono mt-1 block font-bold">White (255)</span>
+              </div>
+            </div>
+
+            <div class="text-right font-sans text-xs flex-1 pl-2">
+              <span class="text-slate-400 block text-[11px]">Threshold Decision:</span>
+              <span id="canvas-status-text" class="text-emerald-400 font-bold text-[11px]">Value exceeds threshold &rarr; Pure White foreground</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+     
+    </div>
+
+    <div id="slide-5" class="slide-panel bg-white justify-between">
+      <div>
+        <span class="text-xs uppercase font-extrabold tracking-wider text-alphagen-purple bg-alphagen-purpleGhost px-4 py-1.5 rounded-md border border-alphagen-purplePale">OpenCV Functions</span>
+        <h2 class="text-3xl font-extrabold text-alphagen-purple mt-2">Finding and Drawing Contours</h2>
+      </div>
+
+      <div class="grid grid-cols-12 gap-8 my-auto items-stretch">
+        <!-- Syntax & Parameter Breakdown (7 cols) -->
+        <div class="col-span-7 space-y-4">
+          <!-- Step 1: findContours Card -->
+          <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-4 rounded-3xl">
+            <div class="flex justify-between items-center mb-1">
+              <span class="bg-alphagen-purple text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase">1. FIND CONTOURS</span>
+              <span class="text-xs font-mono font-bold text-purple-800">cv2.findContours()</span>
+            </div>
+            <p class="text-xs text-alphagen-nearBlack font-bold mb-2">
+              <strong>What it does:</strong> Scans the binary image and extracts the exact list of boundary coordinates surrounding each detected shape.
+            </p>
+            <div class="bg-slate-900 text-white p-2.5 rounded-2xl font-mono text-xs mb-2 overflow-x-auto">
+              contours, hierarchy = cv2.findContours(<br>
+              &nbsp;&nbsp;<span class="text-yellow-300">thresh</span>, <span class="text-cyan-300 font-bold">cv2.RETR_EXTERNAL</span>, <span class="text-emerald-400 font-bold">cv2.CHAIN_APPROX_SIMPLE</span><br>
+              )
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs text-alphagen-darkGrey font-medium">
+              <div class="bg-white p-2 rounded-xl border border-alphagen-purplePale">
+                <strong class="text-purple-700 block">cv2.RETR_EXTERNAL:</strong>
+                Retrieves only outermost boundaries, ignoring interior nested holes.
+              </div>
+              <div class="bg-white p-2 rounded-xl border border-alphagen-purplePale">
+                <strong class="text-emerald-700 block">cv2.CHAIN_APPROX_SIMPLE:</strong>
+                Compresses redundant points (e.g. stores only 4 corner vertices for a box).
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: drawContours Card -->
+          <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-4 rounded-3xl">
+            <div class="flex justify-between items-center mb-1">
+              <span class="bg-alphagen-yellowDark text-alphagen-nearBlack text-[11px] font-extrabold px-3 py-1 rounded-full uppercase">2. DRAW CONTOURS</span>
+              <span class="text-xs font-mono font-bold text-purple-800">cv2.drawContours()</span>
+            </div>
+            <p class="text-xs text-alphagen-nearBlack font-bold mb-2">
+              <strong>What it does:</strong> Takes the coordinate list extracted by <code>findContours</code> and paints visible outlines directly onto your image!
+            </p>
+            <div class="bg-slate-900 text-white p-2.5 rounded-2xl font-mono text-xs mb-2 overflow-x-auto">
+              cv2.drawContours(<span class="text-yellow-300">img</span>, <span class="text-cyan-300">contours</span>, <span class="text-rose-400 font-bold">-1</span>, <span class="text-emerald-400">(0, 255, 0)</span>, <span class="text-amber-300">3</span>)
+            </div>
+            <p class="text-xs text-alphagen-darkGrey font-semibold bg-white p-2 rounded-xl border border-alphagen-purplePale">
+              <strong>Contour Index (-1):</strong> Passing <code class="font-mono text-purple-700 font-bold">-1</code> commands OpenCV to draw <strong>ALL</strong> detected contours. Passing 0 draws only the 1st contour.
+            </p>
+          </div>
+        </div>
+
+        <!-- Live Interactive Contour Canvas Viewer (5 cols) -->
+        <div class="col-span-5 bg-slate-900 border-2 border-slate-800 rounded-3xl p-6 text-white flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="border-b border-slate-800 pb-2 mb-3 text-xs font-mono text-alphagen-yellow font-bold uppercase flex justify-between">
+              <span>LIVE CONTOUR RENDERER</span>
+              <span id="contour-toggle-status" class="text-emerald-400">CONTOURS ON</span>
+            </div>
+
+            <!-- Visual SVG that updates with button click -->
+            <div class="w-full h-44 bg-[#0a1020] rounded-2xl border-2 border-slate-700 p-4 flex items-center justify-center my-auto relative">
+              <svg viewBox="0 0 160 120" class="w-full h-full">
+                <!-- Outer Rectangle -->
+                <rect x="20" y="20" width="50" height="50" fill="#4C97FF" id="shape-rect" />
+                <rect x="18" y="18" width="54" height="54" fill="none" stroke="#10B981" stroke-width="4" id="contour-rect" />
+
+                <!-- Triangle -->
+                <polygon points="115,20 145,70 85,70" fill="#FFD071" id="shape-tri" />
+                <polygon points="115,16 149,72 81,72" fill="none" stroke="#10B981" stroke-width="4" id="contour-tri" />
+
+                <!-- Small Ellipse -->
+                <ellipse cx="80" cy="95" rx="35" ry="15" fill="#ED5661" id="shape-ell" />
+                <ellipse cx="80" cy="95" rx="37" ry="17" fill="none" stroke="#10B981" stroke-width="4" id="contour-ell" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="space-y-2 mt-4">
+            <button onclick="toggleContourLines()" id="contour-toggle-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-2xl text-xs btn-interactive shadow-md">
+              Toggle Contour Lines (Green Stroke)
+            </button>
+            <p class="text-[11px] text-slate-400 font-sans text-center">
+              Green outline shows points connected by <code>CHAIN_APPROX_SIMPLE</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      
+    </div>
+
+    <div id="slide-6" class="slide-panel bg-white justify-between">
+      <div>
+        <span class="text-xs uppercase font-extrabold tracking-wider text-alphagen-purple bg-alphagen-purpleGhost px-4 py-1.5 rounded-md border border-alphagen-purplePale">Lab Practice</span>
+        <h2 class="text-3xl font-extrabold text-alphagen-purple mt-2">Contour Detection Checklist &amp; Live Video Challenge</h2>
+        <p class="text-sm text-alphagen-darkGrey font-medium mt-1">Complete each coding milestone in your editor, then take on the live video challenge!</p>
+      </div>
+
+      <div class="grid grid-cols-12 gap-8 my-auto items-stretch">
+        <!-- Checklist (7 cols) -->
+        <div class="col-span-7 bg-alphagen-purpleGhost border-2 border-alphagen-purplePale rounded-3xl p-6 flex flex-col justify-between">
+          <h3 class="font-extrabold text-sm text-alphagen-purple uppercase tracking-wider mb-3">
+            <i class="fa-solid fa-list-check mr-2"></i> Static Image Contour Checklist:
+          </h3>
+
+          <div class="space-y-3 text-xs md:text-sm">
+            <label class="bg-white border-2 border-alphagen-purplePale rounded-2xl p-3 flex gap-3 items-center cursor-pointer hover:border-alphagen-purple transition">
+              <input type="checkbox" class="contour-step w-5 h-5 accent-purple-600 cursor-pointer" onchange="updateContourSteps()">
+              <span class="font-bold text-alphagen-nearBlack">1. Import OpenCV library into your Python script</span>
+            </label>
+            <label class="bg-white border-2 border-alphagen-purplePale rounded-2xl p-3 flex gap-3 items-center cursor-pointer hover:border-alphagen-purple transition">
+              <input type="checkbox" class="contour-step w-5 h-5 accent-purple-600 cursor-pointer" onchange="updateContourSteps()">
+              <span class="font-bold text-alphagen-nearBlack">2. Read the input image and convert it into grayscale</span>
+            </label>
+            <label class="bg-white border-2 border-alphagen-purplePale rounded-2xl p-3 flex gap-3 items-center cursor-pointer hover:border-alphagen-purple transition">
+              <input type="checkbox" class="contour-step w-5 h-5 accent-purple-600 cursor-pointer" onchange="updateContourSteps()">
+              <span class="font-bold text-alphagen-nearBlack">3. Apply binary thresholding to create a clean black &amp; white image</span>
+            </label>
+            <label class="bg-white border-2 border-alphagen-purplePale rounded-2xl p-3 flex gap-3 items-center cursor-pointer hover:border-alphagen-purple transition">
+              <input type="checkbox" class="contour-step w-5 h-5 accent-purple-600 cursor-pointer" onchange="updateContourSteps()">
+              <span class="font-bold text-alphagen-nearBlack">4. Find contours using external mode and simple chain approximation</span>
+            </label>
+            <label class="bg-white border-2 border-alphagen-purplePale rounded-2xl p-3 flex gap-3 items-center cursor-pointer hover:border-alphagen-purple transition">
+              <input type="checkbox" class="contour-step w-5 h-5 accent-purple-600 cursor-pointer" onchange="updateContourSteps()">
+              <span class="font-bold text-alphagen-nearBlack">5. Draw all contours on the original image with index -1 and display</span>
+            </label>
+          </div>
+
+          <div id="contour-checklist-status" class="mt-4 p-3 bg-white border border-alphagen-purplePale rounded-xl text-xs font-bold text-alphagen-purple text-center">
+            Progress: <span id="contour-step-count" class="text-alphagen-yellowDark font-extrabold">0 / 5</span> Milestones Completed
+          </div>
+        </div>
+
+        <!-- Live Video Challenge Box (5 cols) without spoiler code & test button -->
+        <div class="col-span-5 bg-slate-900 border-2 border-slate-800 rounded-3xl p-6 text-white flex flex-col justify-between shadow-xl">
+          <div>
+            <span class="bg-alphagen-yellow text-alphagen-nearBlack font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
+              Bonus Challenge 🚀
+            </span>
+            <h3 class="font-extrabold text-base text-white mt-3 mb-2 font-mono">
+              Live Video Feed Contour Stream
+            </h3>
+            <p class="text-xs text-slate-300 leading-relaxed font-sans mb-4">
+              Now adapt this pipeline to process live camera frames! Can you stream live video from your webcam, convert every incoming frame, apply thresholding, and draw dynamic real-time contours around your hands and moving objects?
+            </p>
+
+            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 font-sans text-xs text-slate-300 space-y-2">
+              <div class="flex items-center gap-2 text-alphagen-cyan font-bold">
+                <i class="fa-solid fa-camera"></i>
+                <span>Independent Lab Challenge:</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-normal">
+                Open your Python editor, initialize your camera feed, and write the full loop yourself without hints!
+              </p>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-center text-xs font-mono text-alphagen-yellow">
+            🎥 Build and run your live contour script in your Python IDE!
+          </div>
+        </div>
+      </div>
+
+     
+    </div>
+
+    <div id="slide-7" class="slide-panel bg-white justify-between">
+      <div>
+        <span class="text-xs uppercase font-extrabold tracking-wider text-alphagen-purple bg-alphagen-purpleGhost px-4 py-1.5 rounded-md border border-alphagen-purplePale">Mastery Check</span>
+        <h2 class="text-3xl font-extrabold text-alphagen-purple mt-2">Knowledge Check &amp; Celebrate!</h2>
+      </div>
+
+      <div class="space-y-3 my-auto">
+        <!-- Question 1: Threshold 130 (Balanced Options) -->
+        <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-3.5 rounded-2xl flex items-center justify-between">
+          <div class="max-w-md">
+            <h4 class="font-extrabold text-sm text-alphagen-nearBlack">1. If we set threshold cutoff to 130, how will the binary image look?</h4>
+            <p class="text-xs text-alphagen-darkGrey mt-0.5">What happens to pixel values above and below 130?</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="checkFinalQuiz(this, true)" class="quiz-option text-xs px-4 py-2">Pixels &gt; 130 turn White, pixels &le; 130 turn Black</button>
+            <button onclick="checkFinalQuiz(this, false)" class="quiz-option text-xs px-4 py-2">Pixels &gt; 130 turn Black, pixels &le; 130 turn White</button>
+          </div>
+        </div>
+
+        <!-- Question 2: Which function finds contours -->
+        <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-3.5 rounded-2xl flex items-center justify-between">
+          <div class="max-w-md">
+            <h4 class="font-extrabold text-sm text-alphagen-nearBlack">2. Which function is used for finding contours in an image?</h4>
+            <p class="text-xs text-alphagen-darkGrey mt-0.5">OpenCV function to extract coordinate lists</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="checkFinalQuiz(this, false)" class="quiz-option text-xs px-4 py-2 font-mono">cv2.detectContours()</button>
+            <button onclick="checkFinalQuiz(this, true)" class="quiz-option text-xs px-4 py-2 font-mono">cv2.findContours()</button>
+          </div>
+        </div>
+
+        <!-- Question 3: Approximation method -->
+        <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-3.5 rounded-2xl flex items-center justify-between">
+          <div class="max-w-md">
+            <h4 class="font-extrabold text-sm text-alphagen-nearBlack">3. Which parameter specifies the contour approximation method?</h4>
+            <p class="text-xs text-alphagen-darkGrey mt-0.5">Compresses horizontal, vertical, and diagonal segments</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="checkFinalQuiz(this, true)" class="quiz-option text-xs px-4 py-2 font-mono">cv2.CHAIN_APPROX_SIMPLE</button>
+            <button onclick="checkFinalQuiz(this, false)" class="quiz-option text-xs px-4 py-2 font-mono">cv2.RETR_EXTERNAL</button>
+          </div>
+        </div>
+
+        <!-- Question 4: Contour Index -1 -->
+        <div class="bg-alphagen-purpleGhost border-2 border-alphagen-purplePale p-3.5 rounded-2xl flex items-center justify-between">
+          <div class="max-w-md">
+            <h4 class="font-extrabold text-sm text-alphagen-nearBlack">4. What does contour index -1 mean in <code>cv2.drawContours</code>?</h4>
+            <p class="text-xs text-alphagen-darkGrey mt-0.5">Which specific contours get drawn on the image?</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="checkFinalQuiz(this, true)" class="quiz-option text-xs px-4 py-2">Draws all detected contours</button>
+            <button onclick="checkFinalQuiz(this, false)" class="quiz-option text-xs px-4 py-2">Draws only the first contour</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Celebrate Button -->
+      <div>
+        <button onclick="triggerGrandCelebration()" class="w-full bg-alphagen-yellow hover:bg-alphagen-yellowDark text-alphagen-nearBlack font-extrabold py-4 rounded-2xl text-base btn-interactive shadow-lg flex items-center justify-center gap-3">
+          <i class="fa-solid fa-trophy text-alphagen-purple text-xl"></i>
+          <span>Celebrate Mission Completion!</span>
+          <span>🎉</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="nav-bar">
+    <button id="prev-btn" class="nav-btn btn-interactive" onclick="prevSlide()" disabled>
+      <i class="fa-solid fa-arrow-left"></i>
+      <span>Previous</span>
+    </button>
+
+    <span class="text-xs font-semibold text-white/90">
+      Use Arrow Keys (← / →) or buttons to navigate slides
+    </span>
+
+    <button id="next-btn" class="nav-btn btn-interactive" onclick="handleNextOrFinish()">
+      <span id="next-btn-text">Next</span>
+      <i id="next-btn-icon" class="fa-solid fa-arrow-right"></i>
+    </button>
+  </div>
+</div>
+
+<script>
+let currentSlide = 1;
+const totalSlides = 7;
+let soundEnabled = true;
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+/* Web Audio Synthesizer */
+function playSound(type) {
+  if (!soundEnabled) return;
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+
+    if (type === 'correct') {
+      o.type = 'sine';
+      o.frequency.setValueAtTime(523, now);
+      o.frequency.exponentialRampToValueAtTime(659, now + 0.15);
+      g.gain.setValueAtTime(0.1, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      o.start();
+      o.stop(now + 0.3);
+    } else if (type === 'wrong') {
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(180, now);
+      o.frequency.linearRampToValueAtTime(110, now + 0.2);
+      g.gain.setValueAtTime(0.1, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+      o.start();
+      o.stop(now + 0.25);
+    } else {
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(360, now);
+      o.frequency.exponentialRampToValueAtTime(720, now + 0.08);
+      g.gain.setValueAtTime(0.1, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+      o.start();
+      o.stop(now + 0.08);
+    }
+  } catch (e) {}
+}
+
+function toggleAudio() {
+  soundEnabled = !soundEnabled;
+  const iconHtml = soundEnabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark"></i>';
+  const topAudioBtn = document.getElementById('top-audio-btn');
+  const stageAudioBtn = document.getElementById('audio-btn');
+  if (topAudioBtn) topAudioBtn.innerHTML = soundEnabled ? '<i class="fa-solid fa-volume-high text-base"></i>' : '<i class="fa-solid fa-volume-xmark text-base"></i>';
+  if (stageAudioBtn) stageAudioBtn.innerHTML = iconHtml;
+}
+
+/* Confetti Celebrations */
+function triggerSuccessConfetti() {
+  playSound('correct');
+  if (typeof confetti === 'function') {
+    confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+  }
+}
+
+function triggerGrandCelebration() {
+  playSound('correct');
+  if (typeof confetti === 'function') {
+    confetti({
+      particleCount: 140,
+      spread: 90,
+      origin: { y: 0.5 },
+      colors: ['#5E48C4', '#FFD071', '#4C97FF', '#ED5661', '#10B981']
+    });
+    setTimeout(() => {
+      confetti({ particleCount: 90, angle: 60, spread: 55, origin: { x: 0 } });
+      confetti({ particleCount: 90, angle: 120, spread: 55, origin: { x: 1 } });
+    }, 250);
+  }
+}
+
+/* Navigation System */
+function initHeaderDots() {
+  const c = document.getElementById('header-dots-container');
+  if (!c) return;
+  c.innerHTML = '';
+  for (let i = 1; i <= totalSlides; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot-indicator ' + (i === 1 ? 'active' : '');
+    d.onclick = () => goToSlide(i);
+    c.appendChild(d);
+  }
+}
+
+function updateSlideDisplay() {
+  document.querySelectorAll('.slide-panel').forEach((p, i) => p.classList.toggle('active', i + 1 === currentSlide));
+  document.querySelectorAll('.dot-indicator').forEach((d, i) => d.classList.toggle('active', i + 1 === currentSlide));
+
+  const counterPill = document.getElementById('slide-counter-pill');
+  const dropdown = document.getElementById('slide-dropdown');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const nextBtnText = document.getElementById('next-btn-text');
+  const nextBtnIcon = document.getElementById('next-btn-icon');
+
+  if (counterPill) counterPill.innerText = `Slide ${currentSlide} / ${totalSlides}`;
+  if (dropdown) dropdown.value = currentSlide;
+  if (prevBtn) prevBtn.disabled = currentSlide === 1;
+
+  if (nextBtn && nextBtnText && nextBtnIcon) {
+    if (currentSlide === totalSlides) {
+      nextBtnText.innerText = 'Finish';
+      nextBtnIcon.className = 'fa-solid fa-flag-checkered';
+      nextBtn.classList.add('finish-btn');
+    } else {
+      nextBtnText.innerText = 'Next';
+      nextBtnIcon.className = 'fa-solid fa-arrow-right';
+      nextBtn.classList.remove('finish-btn');
+    }
+  }
+}
+
+function handleNextOrFinish() {
+  if (currentSlide === totalSlides) {
+    triggerGrandCelebration();
+  } else {
+    nextSlide();
+  }
+}
+
+function nextSlide() {
+  if (currentSlide < totalSlides) {
+    currentSlide++;
+    updateSlideDisplay();
+    playSound('pop');
+  }
+}
+
+function prevSlide() {
+  if (currentSlide > 1) {
+    currentSlide--;
+    updateSlideDisplay();
+    playSound('pop');
+  }
+}
+
+function goToSlide(n) {
+  if (n >= 1 && n <= totalSlides) {
+    currentSlide = n;
+    updateSlideDisplay();
+    playSound('pop');
+  }
+}
+
+function fitStageToScreen() {
+  const stage = document.querySelector('.slide-stage');
+  const nav = document.querySelector('.nav-bar');
+  if (!stage) return;
+  const availableWidth = window.innerWidth - 32;
+  if (availableWidth < 1280) {
+    const scale = availableWidth / 1280;
+    stage.style.transform = `scale(${scale})`;
+    stage.style.marginBottom = `-${720 * (1 - scale)}px`;
+    if (nav) nav.style.transform = `scale(${scale})`;
+  } else {
+    stage.style.transform = 'none';
+    stage.style.marginBottom = '0px';
+    if (nav) nav.style.transform = 'none';
+  }
+}
+
+/* SLIDE 2: WARM-UP QUESTIONS */
+function checkWarmupQ(btn, isCorrect, qId) {
+  const card = btn.closest('.bg-alphagen-purpleGhost');
+  const fb = document.getElementById(`${qId}-feedback`);
+  card.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected-correct', 'selected-wrong'));
+
+  if (isCorrect) {
+    btn.classList.add('selected-correct');
+    fb.innerText = '✅ Spot on! That is the exact OpenCV function / parameter!';
+    fb.className = 'p-2.5 rounded-xl text-xs font-bold text-center mt-3 block bg-emerald-100 text-emerald-800 border border-emerald-300';
+    triggerSuccessConfetti();
+  } else {
+    btn.classList.add('selected-wrong');
+    fb.innerText = '❌ Not quite. Review previous detection syntax and try again!';
+    fb.className = 'p-2.5 rounded-xl text-xs font-bold text-center mt-3 block bg-rose-100 text-rose-800 border border-rose-300';
+    playSound('wrong');
+  }
+}
+
+/* SLIDE 4: PIPELINE STEPS CHECKS & THRESHOLD SIMULATOR */
+function checkPipeStep(step) {
+  if (step === 'import') {
+    const val = document.getElementById('pipe-import-input').value.trim().toLowerCase();
+    const fb = document.getElementById('pipe-import-fb');
+    if (val.includes('cv2') || val.includes('opencv')) {
+      fb.innerText = '✅ Correct! OpenCV ("cv2") is the computer vision library.';
+      fb.className = 'text-[11px] font-bold block mt-1 text-emerald-700';
+      triggerSuccessConfetti();
+    } else {
+      fb.innerText = '❌ Hint: Type "OpenCV" or "cv2"!';
+      fb.className = 'text-[11px] font-bold block mt-1 text-rose-700';
+      playSound('wrong');
+    }
+    fb.classList.remove('hidden');
+  } else if (step === 'read') {
+    const val = document.getElementById('pipe-read-input').value.trim().toLowerCase();
+    const fb = document.getElementById('pipe-read-fb');
+    if (val.includes('imread')) {
+      fb.innerText = '✅ Correct! "cv2.imread()" loads the image.';
+      fb.className = 'text-[11px] font-bold block mt-1 text-emerald-700';
+      triggerSuccessConfetti();
+    } else {
+      fb.innerText = '❌ Hint: Use the "cv2.imread()" function!';
+      fb.className = 'text-[11px] font-bold block mt-1 text-rose-700';
+      playSound('wrong');
+    }
+    fb.classList.remove('hidden');
+  } else if (step === 'gray') {
+    const val = document.getElementById('pipe-gray-input').value.trim().toLowerCase();
+    const fb = document.getElementById('pipe-gray-fb');
+    if (val.includes('cvtcolor') || val.includes('color_bgr2gray') || val.includes('gray')) {
+      fb.innerText = '✅ Correct! "cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)" converts to grayscale.';
+      fb.className = 'text-[11px] font-bold block mt-1 text-emerald-700';
+      triggerSuccessConfetti();
+    } else {
+      fb.innerText = '❌ Hint: Use "cv2.cvtColor()" with COLOR_BGR2GRAY!';
+      fb.className = 'text-[11px] font-bold block mt-1 text-rose-700';
+      playSound('wrong');
+    }
+    fb.classList.remove('hidden');
+  }
+}
+
+function updateThreshSimulation(val) {
+  playSound('pop');
+  const tVal = parseInt(val, 10);
+  document.getElementById('thresh-val-display').innerText = tVal;
+  document.getElementById('thresh-val-code').innerText = tVal;
+  document.getElementById('thresh-rule-val').innerText = tVal;
+  document.getElementById('thresh-rule-val-2').innerText = tVal;
+
+  const shape = document.getElementById('sim-shape');
+  const status = document.getElementById('canvas-status-text');
+  const lbl = document.getElementById('sim-pixel-lbl');
+
+  // Red shape intensity in grayscale is ~76. If threshold > 130, pixel becomes Black (0), otherwise White (255)
+  if (tVal > 130) {
+    shape.style.backgroundColor = '#000000';
+    shape.style.color = '#ffffff';
+    shape.innerText = '0';
+    lbl.innerText = 'Black (0)';
+    lbl.className = 'text-[10px] text-rose-400 font-mono mt-1 block font-bold';
+    status.innerText = `Threshold = ${tVal} (Shape brightness falls below cutoff -> Becomes 0 Black)`;
+  } else {
+    shape.style.backgroundColor = '#ffffff';
+    shape.style.color = '#000000';
+    shape.innerText = '255';
+    lbl.innerText = 'White (255)';
+    lbl.className = 'text-[10px] text-emerald-400 font-mono mt-1 block font-bold';
+    status.innerText = `Threshold = ${tVal} (Shape brightness exceeds cutoff -> Becomes 255 White)`;
+  }
+}
+
+function updateThreshSimulation(val) {
+  playSound('pop');
+  const tVal = parseInt(val, 10);
+  document.getElementById('thresh-val-display').innerText = tVal;
+  document.getElementById('thresh-val-code').innerText = tVal;
+  document.getElementById('thresh-rule-val').innerText = tVal;
+  document.getElementById('thresh-rule-val-2').innerText = tVal;
+
+  const shape = document.getElementById('sim-shape');
+  const status = document.getElementById('canvas-status-text');
+
+  if (tVal > 140) {
+    shape.style.backgroundColor = '#000000';
+    shape.style.borderColor = '#ffffff';
+    status.innerText = `Threshold = ${tVal} (Strict: Shape intensity falls below threshold -> Black)`;
+  } else {
+    shape.style.backgroundColor = '#ffffff';
+    shape.style.borderColor = '#ffffff';
+    status.innerText = `Threshold = ${tVal} (Permissive: Shape intensity exceeds threshold -> 255 White)`;
+  }
+}
+
+/* SLIDE 5: CONTOUR VISUAL TOGGLE */
+let contourLinesActive = true;
+function toggleContourLines() {
+  playSound('pop');
+  contourLinesActive = !contourLinesActive;
+  
+  const cRect = document.getElementById('contour-rect');
+  const cTri = document.getElementById('contour-tri');
+  const cEll = document.getElementById('contour-ell');
+  const btn = document.getElementById('contour-toggle-btn');
+  const status = document.getElementById('contour-toggle-status');
+
+  if (contourLinesActive) {
+    cRect.style.display = 'block';
+    cTri.style.display = 'block';
+    cEll.style.display = 'block';
+    btn.className = 'w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-2xl text-xs btn-interactive shadow-md';
+    btn.innerText = 'Hide Contour Lines (Green Stroke)';
+    status.innerText = 'CONTOURS ON';
+    status.className = 'text-emerald-400 font-bold';
+    triggerSuccessConfetti();
+  } else {
+    cRect.style.display = 'none';
+    cTri.style.display = 'none';
+    cEll.style.display = 'none';
+    btn.className = 'w-full bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-3 rounded-2xl text-xs btn-interactive shadow-md';
+    btn.innerText = 'Show Contour Lines (Green Stroke)';
+    status.innerText = 'CONTOURS HIDDEN';
+    status.className = 'text-slate-500 font-bold';
+  }
+}
+
+/* SLIDE 6: CHECKLIST UPDATE */
+function updateContourSteps() {
+  playSound('pop');
+  const steps = document.querySelectorAll('.contour-step');
+  const completed = [...steps].filter(c => c.checked).length;
+  document.getElementById('contour-step-count').innerText = `${completed} / ${steps.length}`;
+
+  const status = document.getElementById('contour-checklist-status');
+  if (completed === steps.length) {
+    status.innerHTML = '<span class="text-emerald-700 font-extrabold">🎉 All 5 Milestones Completed! Ready for Video Challenge!</span>';
+    status.className = 'mt-4 p-3 bg-emerald-50 border-2 border-emerald-300 rounded-xl text-xs font-bold text-center';
+    triggerSuccessConfetti();
+  } else {
+    status.innerHTML = `Progress: <span class="text-alphagen-yellowDark font-extrabold">${completed} / ${steps.length}</span> Milestones Completed`;
+    status.className = 'mt-4 p-3 bg-white border border-alphagen-purplePale rounded-xl text-xs font-bold text-alphagen-purple text-center';
+  }
+}
+
+function triggerLiveContourPrompt() {
+  playSound('correct');
+  alert('🚀 Live Video Challenge: In IDLE / VS Code, pass each camera frame from cap.read() into cv2.cvtColor -> cv2.threshold -> cv2.findContours -> cv2.drawContours inside a while True loop!');
+}
+
+/* SLIDE 7: FINAL QUIZ */
+function checkFinalQuiz(btn, isCorrect) {
+  const row = btn.closest('.flex');
+  row.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected-correct', 'selected-wrong'));
+
+  if (isCorrect) {
+    btn.classList.add('selected-correct');
+    playSound('correct');
+  } else {
+    btn.classList.add('selected-wrong');
+    playSound('wrong');
+  }
+}
+
+/* Global Listeners */
+document.addEventListener('keydown', e => {
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') handleNextOrFinish();
+  if (e.key === 'ArrowLeft') prevSlide();
+});
+
+window.addEventListener('resize', fitStageToScreen);
+
+window.addEventListener('DOMContentLoaded', () => {
+  currentSlide = 1;
+  initHeaderDots();
+  updateSlideDisplay();
+  fitStageToScreen();
+});
+</script>
+</body>
+</html>
